@@ -1,0 +1,115 @@
+using UnityEngine;
+
+public class EspadaMagicaDelViento : MonoBehaviour
+{
+    // Referencias para las animaciones, sonidos y otras propiedades
+    public Sprite espadaSprite;  // La imagen de la espada (debe estar en formato PNG)
+    public AudioClip sonidoAtaque;  // Efecto de sonido del ataque (debe estar en formato MP3)
+    public AudioClip sonidoDesenvainado;  // Efecto de sonido al desenvainar (debe estar en formato MP3)
+    public ParticleSystem auraViento;  // Partículas para el aura de viento
+    public ParticleSystem rastroViento;  // Partículas para el rastro de viento
+    public float velocidadCorte = 10f;  // Velocidad del corte de viento
+
+    private bool habilidadCargada = false;  // Para saber si la habilidad especial está cargada
+
+    // Referencia al componente del sonido
+    private AudioSource audioSource;
+    private Animator animator;
+
+    void Start()
+    {
+        // Inicializar componentes
+        audioSource = GetComponent<AudioSource>();
+        animator = GetComponent<Animator>();
+
+        // Asignar la imagen de la espada
+        GetComponent<SpriteRenderer>().sprite = espadaSprite;
+
+        // Inicializar las partículas de aura y rastro
+        auraViento.Stop();
+        rastroViento.Stop();
+    }
+
+    void Update()
+    {
+        // Comprobar si el jugador toca la pantalla
+        if (Input.touchCount > 0)
+        {
+            Touch touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Began)
+            {
+                Ataque();
+            }
+            else if (touch.phase == TouchPhase.Stationary)
+            {
+                CargarHabilidadEspecial();
+            }
+            else if (touch.phase == TouchPhase.Ended)
+            {
+                RealizarCorteViento();
+            }
+        }
+    }
+
+    // Método de ataque básico
+    private void Ataque()
+    {
+        // Activar animación de ataque
+        animator.SetTrigger("Atacar");
+
+        // Reproducir el sonido del ataque
+        audioSource.PlayOneShot(sonidoAtaque);
+
+        // Mostrar el rastro de viento
+        rastroViento.Play();
+    }
+
+    // Método para cargar la habilidad especial
+    private void CargarHabilidadEspecial()
+    {
+        habilidadCargada = true;
+        // Cambiar el aura de viento a un efecto más intenso (puedes modificar las partículas)
+        auraViento.Play();
+    }
+
+    // Método para realizar el "Corte de Viento"
+    private void RealizarCorteViento()
+    {
+        if (habilidadCargada)
+        {
+            // Desactivar aura de viento
+            auraViento.Stop();
+
+            // Realizar animación especial de corte
+            animator.SetTrigger("CorteDeViento");
+
+            // Reproducir el sonido del corte de viento
+            audioSource.PlayOneShot(sonidoDesenvainado);
+
+            // Lógica para infligir daño y lanzar enemigos
+            LanzarEnemigos();
+
+            habilidadCargada = false;  // Resetear habilidad
+        }
+    }
+
+    // Lógica para lanzar enemigos hacia atrás
+    private void LanzarEnemigos()
+    {
+        // Encuentra todos los enemigos en el rango de ataque
+        Collider2D[] enemigos = Physics2D.OverlapCircleAll(transform.position, 5f);
+
+        foreach (var enemigo in enemigos)
+        {
+            if (enemigo.CompareTag("Enemigo"))
+            {
+                // Infligir daño
+                enemigo.GetComponent<Enemigo>().RecibirDanio(20);  // Asume que la clase Enemigo tiene el método RecibirDanio()
+
+                // Lanzar hacia atrás
+                Vector2 direccion = (enemigo.transform.position - transform.position).normalized;
+                enemigo.GetComponent<Rigidbody2D>().AddForce(direccion * velocidadCorte, ForceMode2D.Impulse);
+            }
+        }
+    }
+}
